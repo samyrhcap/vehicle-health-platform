@@ -1,0 +1,2 @@
+CREATE DATABASE vehicle_telemetry_db;
+CREATE DATABASE vehicle_analysis_db;
