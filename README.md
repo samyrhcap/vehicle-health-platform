@@ -299,22 +299,191 @@ VEHICLE_RECALL
 ```text
 vehicle-health-platform
 │
+├── docker-compose.yml
+│
+├── postgres
+│   ├── init.sql
+│   └── init-databases.sh
+│
+├── wiremock
+│   └── mappings
+│       └── recall-response.json
+│
 ├── telemetry-service
-│   ├── src
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   ├── pom.xml
+│   ├── src
 │   └── README.md
 │
 ├── vehicle-analysis-service
-│   ├── src
+│   ├── Dockerfile
+│   ├── .dockerignore
 │   ├── pom.xml
+│   ├── src
 │   └── README.md
 │
 ├── .gitignore
 │
 └── README.md
 ```
+# Running the Platform with Docker
+
+## Prerequisites
+
+The platform is fully containerized and requires only:
+
+- Docker Desktop (Windows/macOS)
+- Docker Engine + Docker Compose (Linux)
+
+No installation of Java, Maven, PostgreSQL, or WireMock is required.
 
 ---
+
+## Start the Platform
+
+Clone the repository:
+
+```bash
+git clone https://github.com/samyrhcap/vehicle-health-platform.git
+
+cd vehicle-health-platform
+```
+
+Build and start the platform:
+
+```bash
+docker compose up --build -d
+```
+
+Docker automatically:
+
+- Builds both Spring Boot applications
+- Starts PostgreSQL
+- Creates application databases
+- Starts WireMock
+- Starts Vehicle Analysis Service
+- Starts Telemetry Service
+
+---
+
+## Containers
+
+The platform starts the following containers:
+
+| Container | Purpose |
+|------------|----------|
+| postgres | PostgreSQL Database Server |
+| db-init | Database bootstrap container |
+| recall-provider | WireMock Recall Provider |
+| vehicle-analysis-service | Vehicle Analysis API |
+| telemetry-service | Telemetry API |
+
+The `db-init` container executes once and exits successfully after ensuring all required databases exist.
+
+This behavior is expected.
+
+---
+
+## Database Initialization
+
+The platform automatically creates and validates the required PostgreSQL databases.
+
+Databases:
+
+```text
+vehicle_telemetry_db
+vehicle_analysis_db
+```
+
+Initialization workflow:
+
+```text
+PostgreSQL
+      ↓
+db-init
+      ↓
+Create databases if missing
+      ↓
+Vehicle Analysis Service
+      ↓
+Telemetry Service
+```
+
+No manual SQL execution is required.
+
+Existing PostgreSQL data is preserved across restarts.
+
+---
+
+## Verify Running Containers
+
+```bash
+docker ps
+```
+
+Expected running containers:
+
+```text
+postgres
+recall-provider
+vehicle-analysis-service
+telemetry-service
+```
+
+View all containers:
+
+```bash
+docker ps -a
+```
+
+Expected completed container:
+
+```text
+db-init
+```
+
+---
+
+## Access the Platform
+
+### Telemetry Service
+
+Swagger UI:
+
+```text
+http://localhost:8081/swagger-ui/index.html
+```
+
+Health Endpoint:
+
+```http
+GET http://localhost:8081/actuator/health
+```
+
+---
+
+### Vehicle Analysis Service
+
+Swagger UI:
+
+```text
+http://localhost:8082/swagger-ui/index.html
+```
+
+Health Endpoint:
+
+```http
+GET http://localhost:8082/actuator/health
+```
+
+---
+
+### WireMock Recall Provider
+
+```text
+http://localhost:9999
+```
 
 # API Documentation
 
@@ -372,7 +541,9 @@ GET /actuator/info
 
 ---
 
-# Build
+# Build & Deployment
+
+## Local Development
 
 Build Telemetry Service:
 
@@ -385,12 +556,58 @@ mvn clean package
 Build Vehicle Analysis Service:
 
 ```bash
-cd vehicle-analysis-service
+cd ../vehicle-analysis-service
 
 mvn clean package
 ```
 
 ---
+
+## Docker Deployment
+
+Build and start all services:
+
+```bash
+docker compose up --build -d
+```
+
+---
+
+## Stop Platform
+
+```bash
+docker compose down
+```
+
+---
+
+## Reset Database State
+
+```bash
+docker compose down -v
+```
+
+> Use this command only when you intentionally want to reset PostgreSQL data.
+
+---
+
+## View Logs
+
+```bash
+docker compose logs -f
+```
+
+Specific services:
+
+```bash
+docker logs postgres
+
+docker logs db-init
+
+docker logs vehicle-analysis-service
+
+docker logs telemetry-service
+```
 
 # Testing
 
