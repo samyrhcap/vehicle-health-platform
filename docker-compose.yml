@@ -14,13 +14,34 @@ services:
 
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 10
+
+  db-init:
+
+    image: postgres:16
+
+    container_name: db-init
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    environment:
+      PGPASSWORD: postgres
+
+    volumes:
+      - ./postgres/init-databases.sh:/init-databases.sh
+
+    entrypoint:
+      - /bin/bash
+      - /init-databases.sh
+
+    restart: "no"
 
   wiremock:
     image: wiremock/wiremock:3.13.1
@@ -42,6 +63,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+      db-init:
+        condition: service_completed_successfully
+
       wiremock:
         condition: service_started
 
@@ -67,6 +92,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+      db-init:
+        condition: service_completed_successfully
+
       vehicle-analysis-service:
         condition: service_started
 
